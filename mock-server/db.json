@@ -1,0 +1,39 @@
+{
+    "books": [
+      {
+        "id": 1,
+        "title": "Sách Lập Trình React",
+        "author": "John Doe",
+        "genre": "Công Nghệ Thông Tin",
+        "description": "Sách hướng dẫn chi tiết về React",
+        "status": "Available",
+        "imageUrl": "https://example.com/book1.jpg"
+      },
+      {
+        "id": 2, 
+        "title": "Khoa Học Máy Tính",
+        "author": "Jane Smith",
+        "genre": "Khoa Học",
+        "description": "Giáo trình cơ bản về khoa học máy tính",
+        "status": "Borrowed",
+        "imageUrl": "https://example.com/book2.jpg"
+      }
+    ],
+    "users": [
+      {
+        "id": 1,
+        "username": "admin",
+        "email": "admin@library.com",
+        "password": "admin123",
+        "role": "admin"
+      },
+      {
+        "id": 2, 
+        "username": "user",
+        "email": "user@library.com", 
+        "password": "user123",
+        "role": "user"
+      }
+    ],
+    "borrowings": []
+  }

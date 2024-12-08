@@ -1,107 +1,37 @@
-// File: src/contexts/AuthContext.js
+// src/contexts/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
-import setupInterceptors from '../utils/apiInterceptor';
-
-// Enum trạng thái xác thực
-const AUTH_STATES = {
-  INITIAL: 'INITIAL',
-  AUTHENTICATED: 'AUTHENTICATED',
-  UNAUTHENTICATED: 'UNAUTHENTICATED'
-};
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [authState, setAuthState] = useState({
     user: null,
-    status: AUTH_STATES.INITIAL,
+    status: 'INITIAL',
     loading: true
   });
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Thiết lập interceptors
-    setupInterceptors(navigate);
-
-    const checkAuthentication = async () => {
-      try {
-        const token = localStorage.getItem('token') || 
-                      sessionStorage.getItem('token');
-        
-        if (token) {
-          // Validate token
-          const userData = await authService.validateToken(token);
-          
-          setAuthState({
-            user: userData,
-            status: AUTH_STATES.AUTHENTICATED,
-            loading: false
-          });
-        } else {
-          setAuthState(prev => ({
-            ...prev,
-            status: AUTH_STATES.UNAUTHENTICATED,
-            loading: false
-          }));
-        }
-      } catch (error) {
-        // Token không hợp lệ
-        setAuthState({
-          user: null,
-          status: AUTH_STATES.UNAUTHENTICATED,
-          loading: false
-        });
-      }
-    };
-
-    checkAuthentication();
-  }, [navigate]);
-
-  const login = async (credentials, rememberMe = false) => {
+  // Loại bỏ useNavigate khỏi context
+  const login = async (credentials) => {
     try {
-      const response = await authService.login(credentials, rememberMe);
+      const response = await authService.login(credentials);
       
-      // Lưu token và user
-      const storageMethod = rememberMe ? localStorage : sessionStorage;
-      storageMethod.setItem('token', response.token);
-      storageMethod.setItem('user', JSON.stringify(response.user));
-
-      setAuthState({
-        user: response.user,
-        status: AUTH_STATES.AUTHENTICATED,
-        loading: false
-      });
-
+      // Trả về thông tin đăng nhập thay vì điều hướng
       return response;
     } catch (error) {
-      // Xử lý lỗi đăng nhập
       throw error;
     }
   };
 
   const logout = () => {
-    // Đăng xuất trên server
+    // Loại bỏ việc điều hướng trực tiếp
     authService.logout();
-
-    // Xóa token và user
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
-
     setAuthState({
       user: null,
-      status: AUTH_STATES.UNAUTHENTICATED,
+      status: 'UNAUTHENTICATED',
       loading: false
     });
-
-    // Chuyển hướng đến trang đăng nhập
-    navigate('/login');
   };
-
-  // Các phương thức khác như updateUser, hasPermission...
 
   return (
     <AuthContext.Provider 
@@ -111,7 +41,7 @@ export const AuthProvider = ({ children }) => {
         logout 
       }}
     >
-      {!authState.loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

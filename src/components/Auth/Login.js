@@ -1,4 +1,3 @@
-// File: src/components/Auth/Login.js
 import React, { useState } from 'react';
 import { Formik, Form, Field } from 'formik';
 import { 
@@ -7,7 +6,8 @@ import {
   Col, 
   Card, 
   Button, 
-  Alert 
+  Alert,
+  Form as BootstrapForm
 } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoginValidationSchema } from '../../utils/validation';
@@ -16,25 +16,25 @@ import authService from '../../services/authService';
 
 const Login = () => {
   const [error, setError] = useState(null);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
       setError(null);
-      // Gọi API đăng nhập
       const response = await authService.login({
         email: values.email,
-        password: values.password
+        password: values.password,
+        rememberMe // Truyền thêm flag ghi nhớ
       });
 
       // Lưu thông tin người dùng và token
-      login(response.user, response.token);
+      login(response.user, response.token, rememberMe);
 
       // Chuyển hướng đến dashboard
       navigate('/dashboard');
     } catch (err) {
-      // Xử lý lỗi đăng nhập
       setError(err.message || 'Đăng nhập thất bại');
     }
 
@@ -102,6 +102,16 @@ const Login = () => {
                           {errors.password}
                         </div>
                       )}
+                    </div>
+
+                    {/* Thêm checkbox Ghi Nhớ Đăng Nhập */}
+                    <div className="mb-3">
+                      <BootstrapForm.Check 
+                        type="checkbox"
+                        label="Ghi nhớ đăng nhập"
+                        checked={rememberMe}
+                        onChange={() => setRememberMe(!rememberMe)}
+                      />
                     </div>
 
                     <div className="d-grid gap-2">

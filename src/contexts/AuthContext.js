@@ -1,73 +1,121 @@
 // File: src/contexts/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import authService from '../services/authService';
+import setupInterceptors from '../utils/apiInterceptor';
+
+// Enum trạng thái xác thực
+const AUTH_STATES = {
+  INITIAL: 'INITIAL',
+  AUTHENTICATED: 'AUTHENTICATED',
+  UNAUTHENTICATED: 'UNAUTHENTICATED'
+};
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState({
+    user: null,
+    status: AUTH_STATES.INITIAL,
+    loading: true
+  });
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Kiểm tra token khi component mount
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    // Thiết lập interceptors
+    setupInterceptors(navigate);
 
-    if (token && storedUser) {
+    const checkAuthentication = async () => {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
+        const token = localStorage.getItem('token') || 
+                      sessionStorage.getItem('token');
+        
+        if (token) {
+          // Validate token
+          const userData = await authService.validateToken(token);
+          
+          setAuthState({
+            user: userData,
+            status: AUTH_STATES.AUTHENTICATED,
+            loading: false
+          });
+        } else {
+          setAuthState(prev => ({
+            ...prev,
+            status: AUTH_STATES.UNAUTHENTICATED,
+            loading: false
+          }));
+        }
       } catch (error) {
-        // Xóa token và user nếu parse thất bại
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Token không hợp lệ
+        setAuthState({
+          user: null,
+          status: AUTH_STATES.UNAUTHENTICATED,
+          loading: false
+        });
       }
-    }
-    setLoading(false);
-  }, []);
+    };
 
-  const login = (userData, token) => {
-    // Lưu thông tin người dùng và token
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', token);
-    
-    setUser(userData);
-    setIsAuthenticated(true);
+    checkAuthentication();
+  }, [navigate]);
+
+  const login = async (credentials, rememberMe = false) => {
+    try {
+      const response = await authService.login(credentials, rememberMe);
+      
+      // Lưu token và user
+      const storageMethod = rememberMe ? localStorage : sessionStorage;
+      storageMethod.setItem('token', response.token);
+      storageMethod.setItem('user', JSON.stringify(response.user));
+
+      setAuthState({
+        user: response.user,
+        status: AUTH_STATES.AUTHENTICATED,
+        loading: false
+      });
+
+      return response;
+    } catch (error) {
+      // Xử lý lỗi đăng nhập
+      throw error;
+    }
   };
 
   const logout = () => {
-    // Xóa thông tin người dùng và token
+    // Đăng xuất trên server
+    authService.logout();
+
+    // Xóa token và user
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
-    setUser(null);
-    setIsAuthenticated(false);
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+
+    setAuthState({
+      user: null,
+      status: AUTH_STATES.UNAUTHENTICATED,
+      loading: false
+    });
+
+    // Chuyển hướng đến trang đăng nhập
+    navigate('/login');
   };
 
-  const updateUser = (updatedUser) => {
-    // Cập nhật thông tin người dùng
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-  };
+  // Các phương thức khác như updateUser, hasPermission...
 
   return (
     <AuthContext.Provider 
       value={{ 
-        user, 
-        isAuthenticated, 
-        loading,
+        ...authState, 
         login, 
-        logout, 
-        updateUser 
+        logout 
       }}
     >
-      {!loading && children}
+      {!authState.loading && children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook để sử dụng AuthContext
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

@@ -2,9 +2,12 @@
 import api from '../utils/api';
 
 const authService = {
-  login: async (credentials) => {
+  login: async (credentials, rememberMe = false) => {
     try {
-      const response = await api.post('/auth/login', credentials);
+      const response = await api.post('/auth/login', {
+        ...credentials,
+        rememberMe // Truyền thêm flag ghi nhớ
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : new Error('Đăng nhập thất bại');
@@ -29,7 +32,6 @@ const authService = {
     }
   },
 
-
   resetPassword: async (token, newPassword) => {
     try {
       const response = await api.post('/auth/reset-password', { 
@@ -42,10 +44,34 @@ const authService = {
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  // Thêm phương thức validate token
+  validateToken: async (token) => {
+    try {
+      const response = await api.post('/auth/validate-token', { token });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : new Error('Token không hợp lệ');
+    }
   },
+
+  logout: async () => {
+    try {
+      // Gọi API đăng xuất để hủy token phía server (nếu có)
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  },
+
+  // Thêm phương thức lấy thông tin người dùng
+  getUserProfile: async () => {
+    try {
+      const response = await api.get('/auth/profile');
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : new Error('Không thể lấy thông tin người dùng');
+    }
+  }
 };
 
 export default authService;
